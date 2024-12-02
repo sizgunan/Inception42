@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  mariadb:
+    build: ./requirements/mariadb
+    image: mariadb:1337
+    restart: on-failure
+    container_name: mariadb
+    env_file : .env
+    networks:
+      - inception
+    volumes:
+      - mariadb:/var/lib/mysql
+
+  nginx:
+    build: ./requirements/nginx
+    image: nginx:1337
+    restart: on-failure
+    container_name: nginx
+    env_file : .env
+    networks:
+      - inception
+    ports:
+      - "443:443"
+    depends_on:
+      - wordpress
+    volumes:
+      - wordpress:/var/www/html
+
+  wordpress:
+    build: ./requirements/wordpress
+    image: wordpress:1337
+    restart: on-failure
+    container_name: wordpress
+    env_file : .env
+    networks:
+      - inception
+    depends_on:
+      - mariadb
+    volumes:
+      - wordpress:/var/www/html
+
+  redis:
+    image: redis:1337
+    build: ./requirements/bonus/redis
+    restart: on-failure
+    container_name: redis
+    env_file: .env
+    networks:
+      - inception
+    depends_on:
+      - wordpress
+    volumes:
+      - wordpress:/var/www/html
+
+  adminer:
+    image: adminer:1337
+    build: ./requirements/bonus/adminer
+    restart: on-failure
+    container_name: adminer
+    env_file: .env
+    ports:
+      - "8081:8081"
+    networks:
+      - inception
+    depends_on:
+      - wordpress
+
+  staticwebsite:
+    image: staticwebsite
+    build: ./requirements/bonus/staticwebsite
+    restart: on-failure
+    container_name: staticwebsite
+    ports:
+      - "6783:80"
+    networks:
+      - inception
+
+  cadvisor:
+    image: cadvisor:1337
+    build: ./requirements/bonus/cadvisor
+    restart: on-failure
+    container_name: cadvisor
+    env_file: .env
+    ports:
+      - "5050:8080"
+    networks:
+      - inception
+    volumes: 
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - "/dev/kmsg:/dev/kmsg"
+    privileged: true
+
+
+volumes:
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      device: "/home/sizgunan/data/wordpress"
+      o: "bind"
+  mariadb:
+    driver: local
+    driver_opts:
+      type: none
+      device: "/home/sizgunan/data/mariadb"
+      o: "bind"
+
+networks:
+  inception:
